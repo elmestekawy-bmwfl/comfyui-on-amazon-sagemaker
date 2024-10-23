@@ -65,7 +65,11 @@ def invocations():
         print(flask.request.headers)
 
     # get prompt from request body regardless of content type
-    prompt = flask.request.get_json(silent=True, force=True)
+    import json
+    prompt_json = flask.request.get_json(silent=True, force=True)
+    prompt = json.loads(prompt_json)
+    images = prompt.get("images")
+    prompt.pop("images")
     image_data = prompt_for_image_data(ws, client_id, prompt)
 
     # convert png to jpeg if it is allowed from accept header
