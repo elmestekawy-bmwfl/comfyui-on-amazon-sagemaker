@@ -78,17 +78,6 @@ def prepare_payload_with_binary_images(existing_payload, binary_images):
     existing_payload.update({"images": encoded_images})
     return json.dumps(existing_payload)
 
-def prepare_payload_with_images(existing_payload, images):
-    # Already in base64 as they were accessed through a json file
-    # Add to dictionary
-    encoded_images = {}
-    for i, image in enumerate(images):
-        encoded_images[f"image_{i}"] = image
-
-    # Update the existing payload with the encoded images
-    existing_payload.update({"images": encoded_images})
-    return json.dumps(existing_payload)
-
 def invoke_from_prompt(prompt_file, positive_prompt, negative_prompt, seed=None, images):
     """
     Invokes the SageMaker endpoint with the provided prompt data.
@@ -114,12 +103,14 @@ def invoke_from_prompt(prompt_file, positive_prompt, negative_prompt, seed=None,
     prompt_dict = json.loads(prompt_text)
     prompt_dict = update_seed(prompt_dict, seed)
     prompt_dict = update_prompt_text(prompt_dict, positive_prompt, negative_prompt)
-    prompt_text = json.dumps(prompt_dict)
 
     endpoint_name = os.environ["ENDPOINT_NAME"]
     content_type = "application/json"
     accept = "*/*"
-    payload = prepare_payload_with_images(prompt_text,images)
+    # The images are already in base64 as they were accessed through a json file
+    # Assuming it is setup such that images in already encoded as base64 and is a dictionary with the encoded image
+    prompt_dict.update({"images": images})
+    payload = json.dumps(prompt_dict)
     logger.info("Final payload to invoke sagemaker:")
     logger.info(json.dumps(payload, indent=4))
     response = sagemaker_client.invoke_endpoint(
@@ -147,18 +138,18 @@ def lambda_handler(event: dict, context: dict):
     request = json.loads(event["body"])
 
     try:
-        prompt_file = request.get("prompt_file", "workflow_api.json")
         positive_prompt = request["positive_prompt"]
         negative_prompt = request.get("negative_prompt", "")
         seed = request.get("seed")
-
-
-
+        # Assuming it is setup such that images in already encoded as base64 and is a dictionary with the encoded image
+        images = request.get("images",{})
+        prompt_file = f"workflow_api_{len(images)}person_api.json"
         response = invoke_from_prompt(
             prompt_file=prompt_file,
             positive_prompt=positive_prompt,
             negative_prompt=negative_prompt,
             seed=seed,
+            imgaes=images,
         )
     except KeyError as e:
         logger.error(f"Error: {e}")
