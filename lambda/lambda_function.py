@@ -64,8 +64,32 @@ def update_prompt_text(prompt_dict, positive_prompt, negative_prompt):
                     prompt_dict[i]["inputs"]["text"] = negative_prompt
     return prompt_dict
 
+import base64
+def encode_binary_to_base64(binary_image):
+    return base64.b64encode(binary_image).decode('utf-8')
 
-def invoke_from_prompt(prompt_file, positive_prompt, negative_prompt, seed=None):
+def prepare_payload_with_binary_images(existing_payload, binary_images):
+    # Encode and add to dictionary
+    encoded_images = {}
+    for i, binary_image in enumerate(binary_images):
+        encoded_images[f"image_{i}"] = encode_binary_to_base64(binary_image)
+
+    # Update the existing payload with the encoded images
+    existing_payload.update({"images": encoded_images})
+    return json.dumps(existing_payload)
+
+def prepare_payload_with_images(existing_payload, images):
+    # Already in base64 as they were accessed through a json file
+    # Add to dictionary
+    encoded_images = {}
+    for i, image in enumerate(images):
+        encoded_images[f"image_{i}"] = image
+
+    # Update the existing payload with the encoded images
+    existing_payload.update({"images": encoded_images})
+    return json.dumps(existing_payload)
+
+def invoke_from_prompt(prompt_file, positive_prompt, negative_prompt, seed=None, images):
     """
     Invokes the SageMaker endpoint with the provided prompt data.
 
@@ -95,7 +119,7 @@ def invoke_from_prompt(prompt_file, positive_prompt, negative_prompt, seed=None)
     endpoint_name = os.environ["ENDPOINT_NAME"]
     content_type = "application/json"
     accept = "*/*"
-    payload = prompt_text
+    payload = prepare_payload_with_images(prompt_text,images)
     logger.info("Final payload to invoke sagemaker:")
     logger.info(json.dumps(payload, indent=4))
     response = sagemaker_client.invoke_endpoint(
@@ -127,6 +151,9 @@ def lambda_handler(event: dict, context: dict):
         positive_prompt = request["positive_prompt"]
         negative_prompt = request.get("negative_prompt", "")
         seed = request.get("seed")
+
+
+
         response = invoke_from_prompt(
             prompt_file=prompt_file,
             positive_prompt=positive_prompt,
