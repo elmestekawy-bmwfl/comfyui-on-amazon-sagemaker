@@ -1,0 +1,14 @@
+[tool.poetry]
+name = "comfyui-on-amazon-sagemaker"
+version = "0.1.0"
+description = ""
+authors = ["Karim Elmestekawy <karim.elmestekawy@partner.bmwgroup.com>"]
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.13"
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
